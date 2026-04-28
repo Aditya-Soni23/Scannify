@@ -1,15 +1,15 @@
 {
-    "name": "Scanify",
-    "short_name": "Scanify",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#0f1115",
-    "theme_color": "#4CAF50",
-    "icons": [
-      {
-        "src": "icon.png",
-        "sizes": "192x192",
-        "type": "image/png"
-      }
-    ]
-  }
+  "name": "Scanify Scanner",
+  "short_name": "Scanify",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#3d5afe",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1055/1055644.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
