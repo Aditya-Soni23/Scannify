@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanify</title>
+
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+
+<!-- OpenCV -->
+<script async src="https://docs.opencv.org/4.5.5/opencv.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <h1>Scanify</h1>
+    <button id="scanBtn" class="primary">📷 Scan Now</button>
+  </div>
+
+  <!-- CAMERA -->
+  <div id="cameraScreen" class="screen">
+    <video id="video" autoplay playsinline></video>
+    <button id="captureBtn" class="primary">Capture</button>
+  </div>
+
+  <!-- CROP -->
+  <div id="cropScreen" class="screen">
+    <canvas id="canvas"></canvas>
+    <div class="controls">
+      <button id="retakeBtn">Retake</button>
+      <button id="confirmBtn" class="primary">Next</button>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div id="pagesScreen" class="screen">
+    <h2>Pages</h2>
+    <div id="pagesContainer"></div>
+    <button id="addPageBtn">➕ Add Page</button>
+    <button id="finishBtn" class="primary">Finish</button>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
