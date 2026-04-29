@@ -39,13 +39,41 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function startCamera() {
-      try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          elements.video.srcObject = stream;
-          await new Promise(res => elements.video.onloadedmetadata = res);
-          elements.video.play();
-      } catch (err) { alert("Camera Permission Required"); }
-  }
+    try {
+        // We define 'ideal' high-res constraints
+        const constraints = {
+            video: {
+                facingMode: 'environment',
+                width: { ideal: 4096 }, // Try to get 4K or 1080p
+                height: { ideal: 2160 },
+                focusMode: { ideal: 'continuous' } // Force continuous autofocus
+            }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        elements.video.srcObject = stream;
+
+        await new Promise(res => elements.video.onloadedmetadata = res);
+        
+        // --- ADD THIS: Direct Hardware Focus Fix ---
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities();
+        
+        // Check if the phone supports focusing and set it to continuous
+        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+            await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }]
+            });
+        }
+
+        elements.video.play();
+    } catch (err) {
+        console.error("Camera error:", err);
+        // Fallback if the high-res constraints are too "strict" for an older phone
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        elements.video.srcObject = stream;
+    }
+}
 
   function stopCamera() {
       if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
