@@ -43,7 +43,7 @@
         <!-- Review State -->
         <div id="review-state" class="state">
             <div class="glass-header">
-                <h2>Adjust Corners</h2>
+                <h2>Adjust Corners</h2><button style="align-items: center; position: relative; width: 180px; left: 250px; text-align: center;" id="finish-btn" class="primary-btn">Finish</button>
             </div>
             <div class="image-container">
                 <canvas id="crop-canvas"></canvas>
@@ -51,7 +51,7 @@
             <div class="review-controls">
                 <button id="retake-btn" class="secondary-btn">Retake</button>
                 <button id="next-btn" class="secondary-btn">Add Page</button>
-                <button id="finish-btn" class="primary-btn">Finish</button>
+                
             </div>
         </div>
 
@@ -59,15 +59,12 @@
         <div id="pdf-state" class="state">
             <header class="glass-header">
                 <button id="back-btn" class="icon-btn">✕</button>
-                <h1>My Scans</h1>
+                <h1>My Scans</h1><button id="create-pdf-btn" class="primary-btn">Generate & Share PDF</button>
             </header>
             
             <!-- This div will now scroll perfectly -->
             <div id="image-list"></div>
             
-            <footer class="glass-footer">
-                <button id="create-pdf-btn" class="primary-btn">Generate & Share PDF</button>
-            </footer>
         </div>
     </div>
 
