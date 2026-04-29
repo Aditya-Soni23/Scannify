@@ -141,10 +141,20 @@ p { opacity: 0.7; margin-bottom: 2rem; }
 
 /* Review State */
 .glass-header {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
-  padding: 20px;
-  border-bottom: 1px solid var(--glass-border);
+  display: flex;             /* This forces the H2 and Button onto one line */
+  flex-direction: row;       /* Ensures they sit side-by-side */
+  align-items: center;       /* Centers them vertically so they look aligned */
+  justify-content: space-between; /* Pushes the title to the left and button to the right */
+  padding: 10px 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Make sure the text doesn't take up too much width */
+.glass-header h2 {
+  margin: 0;
+  white-space: nowrap;      /* Prevents the title from wrapping to a second line */
+  font-size: 1.1rem;
 }
 
 .image-container {

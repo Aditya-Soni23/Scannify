@@ -43,7 +43,9 @@
         <!-- Review State -->
         <div id="review-state" class="state">
             <div class="glass-header">
-                <h2>Adjust Corners</h2><button style="align-items: center; position: relative; width: 180px; left: 250px; text-align: center;" id="finish-btn" class="primary-btn">Finish</button>
+                <h2>Adjust Corners</h2>
+                <!-- Removed 'left' and 'position' from inline style so Flexbox can work -->
+                <button style="width: 180px;" id="finish-btn" class="primary-btn">Finish</button>
             </div>
             <div class="image-container">
                 <canvas id="crop-canvas"></canvas>
