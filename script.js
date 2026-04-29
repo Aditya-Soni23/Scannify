@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // --- State Management ---
   const states = {
     HOME: 'home-state',
     CAMERA: 'camera-state',
@@ -9,12 +8,11 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let currentState = states.HOME;
-
-  // --- State Variables ---
   let stream = null;
   let images = [];
+  let cropPoints = [];
+  let draggingPoint = null;
 
-  // --- UI Elements ---
   const elements = {
     scanBtn: document.getElementById('scan-btn'),
     captureBtn: document.getElementById('capture-btn'),
@@ -28,94 +26,200 @@ document.addEventListener("DOMContentLoaded", () => {
     backBtn: document.getElementById('back-btn')
   };
 
-  // --- Safe State Switching ---
+  // ---------- STATE ----------
   function setActiveState(newState) {
-    currentState = newState;
-
-    const allStates = ['home-state', 'camera-state', 'review-state', 'pdf-state'];
-
-    allStates.forEach(id => {
+    ['home-state','camera-state','review-state','pdf-state'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('active');
     });
 
     const activeEl = document.getElementById(newState);
-    if (activeEl) {
-      activeEl.classList.add('active');
-    } else {
-      console.error("State not found:", newState);
-    }
+    if (activeEl) activeEl.classList.add('active');
   }
 
-  // --- Camera Handling ---
+  // ---------- CAMERA ----------
   async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false
+        video: { facingMode: 'environment' }
       });
 
       elements.video.srcObject = stream;
 
-      // Wait for video metadata (important fix)
-      await new Promise(resolve => {
-        elements.video.onloadedmetadata = () => resolve();
+      await new Promise(res => {
+        elements.video.onloadedmetadata = res;
       });
 
       elements.video.play();
 
-    } catch (error) {
-      console.error('Camera error:', error);
-      alert('Camera permission denied or not available');
-      setActiveState(states.HOME);
+    } catch (err) {
+      alert("Camera error");
+      console.error(err);
     }
   }
 
   function stopCamera() {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(t => t.stop());
       stream = null;
     }
   }
 
-  // --- Capture + Crop ---
-  function captureAndCrop() {
-    const video = elements.video;
+  // ---------- CAPTURE ----------
+  function captureFrame() {
+    const canvas = document.createElement('canvas');
+    canvas.width = elements.video.videoWidth;
+    canvas.height = elements.video.videoHeight;
 
-    if (!video.videoWidth) {
-      alert("Camera not ready");
-      return;
-    }
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(elements.video, 0, 0);
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-
-    const ctx = tempCanvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-
-    // --- Simple center crop (demo) ---
-    const cropFactor = 0.85;
-    const w = tempCanvas.width * cropFactor;
-    const h = tempCanvas.height * cropFactor;
-
-    const x = (tempCanvas.width - w) / 2;
-    const y = (tempCanvas.height - h) / 2;
-
-    const finalCanvas = elements.cropCanvas;
-    finalCanvas.width = w;
-    finalCanvas.height = h;
-
-    const fctx = finalCanvas.getContext('2d');
-    fctx.drawImage(tempCanvas, x, y, w, h, 0, 0, w, h);
+    return canvas;
   }
 
-  // --- PDF Generation ---
-  function generatePdf() {
-    if (images.length === 0) {
-      alert('No images added');
+  // ---------- AUTO DETECT ----------
+  function autoDetect(canvas) {
+    if (typeof cv === 'undefined') {
+      console.warn("OpenCV not loaded");
       return;
     }
+
+    let src = cv.imread(canvas);
+    let gray = new cv.Mat();
+    let edges = new cv.Mat();
+    let contours = new cv.MatVector();
+    let hierarchy = new cv.Mat();
+
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    cv.GaussianBlur(gray, gray, new cv.Size(5,5), 0);
+    cv.Canny(gray, edges, 75, 200);
+
+    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+    let biggest = null;
+    let maxArea = 0;
+
+    for (let i = 0; i < contours.size(); i++) {
+      let cnt = contours.get(i);
+      let area = cv.contourArea(cnt);
+
+      if (area > 1000) {
+        let peri = cv.arcLength(cnt, true);
+        let approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+        if (approx.rows === 4 && area > maxArea) {
+          biggest = approx;
+          maxArea = area;
+        }
+      }
+    }
+
+    if (biggest) {
+      cropPoints = [];
+
+      for (let i = 0; i < 4; i++) {
+        cropPoints.push({
+          x: biggest.intPtr(i,0)[0],
+          y: biggest.intPtr(i,0)[1]
+        });
+      }
+    } else {
+      // fallback (center rectangle)
+      cropPoints = [
+        {x:50,y:50},
+        {x:canvas.width-50,y:50},
+        {x:canvas.width-50,y:canvas.height-50},
+        {x:50,y:canvas.height-50}
+      ];
+    }
+
+    src.delete(); gray.delete(); edges.delete();
+    contours.delete(); hierarchy.delete();
+  }
+
+  // ---------- DRAW ----------
+  function drawCanvas(baseCanvas) {
+    const canvas = elements.cropCanvas;
+    canvas.width = baseCanvas.width;
+    canvas.height = baseCanvas.height;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(baseCanvas, 0, 0);
+
+    ctx.strokeStyle = "lime";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
+    for (let i=1;i<4;i++){
+      ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    cropPoints.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,8,0,2*Math.PI);
+      ctx.fillStyle="red";
+      ctx.fill();
+    });
+  }
+
+  // ---------- DRAG ----------
+  elements.cropCanvas.addEventListener('mousedown', e => {
+    const rect = elements.cropCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    cropPoints.forEach((p,i)=>{
+      if (Math.hypot(p.x-x,p.y-y)<15) draggingPoint=i;
+    });
+  });
+
+  elements.cropCanvas.addEventListener('mousemove', e => {
+    if (draggingPoint!==null) {
+      const rect = elements.cropCanvas.getBoundingClientRect();
+      cropPoints[draggingPoint].x = e.clientX - rect.left;
+      cropPoints[draggingPoint].y = e.clientY - rect.top;
+
+      drawCanvas(currentCaptured);
+    }
+  });
+
+  window.addEventListener('mouseup', ()=> draggingPoint=null);
+
+  let currentCaptured = null;
+
+  // ---------- FINAL CROP ----------
+  function getCroppedImage() {
+    const src = currentCaptured;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // simple bounding box crop (can upgrade to perspective later)
+    const xs = cropPoints.map(p=>p.x);
+    const ys = cropPoints.map(p=>p.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const w = maxX-minX;
+    const h = maxY-minY;
+
+    canvas.width = w;
+    canvas.height = h;
+
+    ctx.drawImage(src, minX, minY, w, h, 0, 0, w, h);
+
+    return canvas.toDataURL("image/png");
+  }
+
+  // ---------- PDF ----------
+  function generatePdf() {
+    if (!images.length) return alert("No images");
 
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -124,97 +228,80 @@ document.addEventListener("DOMContentLoaded", () => {
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF();
 
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
-
-      images.forEach((img, i) => {
-        if (i > 0) pdf.addPage();
-
-        const margin = 10;
-        pdf.addImage(img, 'PNG', margin, margin, pdfW - 2 * margin, pdfH - 2 * margin);
+      images.forEach((img,i)=>{
+        if (i>0) pdf.addPage();
+        pdf.addImage(img,'PNG',10,10,180,260);
       });
 
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-
-      window.open(url, '_blank');
+      pdf.save("scanify.pdf");
     };
 
     document.head.appendChild(script);
   }
 
-  // --- Render Image List ---
-  function renderImageList() {
+  // ---------- EVENTS ----------
+  elements.scanBtn.onclick = async ()=>{
+    setActiveState(states.CAMERA);
+    await startCamera();
+  };
+
+  elements.captureBtn.onclick = ()=>{
+    currentCaptured = captureFrame();
+    autoDetect(currentCaptured);
+    drawCanvas(currentCaptured);
+
+    stopCamera();
+    setActiveState(states.REVIEW);
+  };
+
+  elements.retakeBtn.onclick = async ()=>{
+    setActiveState(states.CAMERA);
+    await startCamera();
+  };
+
+  elements.nextBtn.onclick = async ()=>{
+    images.push(getCroppedImage());
+    setActiveState(states.CAMERA);
+    await startCamera();
+  };
+
+  elements.finishBtn.onclick = ()=>{
+    images.push(getCroppedImage());
+    renderList();
+    setActiveState(states.PDF);
+  };
+
+  elements.backBtn.onclick = ()=>{
+    images=[];
+    setActiveState(states.HOME);
+  };
+
+  elements.createPdfBtn.onclick = generatePdf;
+
+  // ---------- RENDER ----------
+  function renderList() {
     elements.imageList.innerHTML = '';
 
-    images.forEach((imgData, index) => {
-      const div = document.createElement('div');
-      div.className = 'list-item';
+    images.forEach((img,i)=>{
+      const div=document.createElement('div');
+      div.className='list-item';
 
-      const img = document.createElement('img');
-      img.src = imgData;
+      const image=document.createElement('img');
+      image.src=img;
 
-      const remove = document.createElement('div');
-      remove.className = 'remove-btn';
-      remove.innerText = '×';
+      const remove=document.createElement('div');
+      remove.className='remove-btn';
+      remove.innerText='×';
 
-      remove.onclick = () => {
-        images.splice(index, 1);
-        renderImageList();
+      remove.onclick=()=>{
+        images.splice(i,1);
+        renderList();
       };
 
-      div.appendChild(img);
+      div.appendChild(image);
       div.appendChild(remove);
       elements.imageList.appendChild(div);
     });
   }
-
-  // --- Events ---
-
-  // Scan
-  elements.scanBtn.addEventListener('click', async () => {
-    setActiveState(states.CAMERA);
-    await startCamera();
-  });
-
-  // Capture
-  elements.captureBtn.addEventListener('click', () => {
-    captureAndCrop();
-    stopCamera();
-    setActiveState(states.REVIEW);
-  });
-
-  // Retake
-  elements.retakeBtn.addEventListener('click', async () => {
-    setActiveState(states.CAMERA);
-    await startCamera();
-  });
-
-  // Next
-  elements.nextBtn.addEventListener('click', async () => {
-    const imgData = elements.cropCanvas.toDataURL('image/png');
-    images.push(imgData);
-
-    setActiveState(states.CAMERA);
-    await startCamera();
-  });
-
-  // Finish
-  elements.finishBtn.addEventListener('click', () => {
-    const imgData = elements.cropCanvas.toDataURL('image/png');
-    images.push(imgData);
-
-    renderImageList();
-    setActiveState(states.PDF);
-  });
-
-  // Back
-  elements.backBtn.addEventListener('click', () => {
-    images = [];
-    setActiveState(states.HOME);
-  });
-
-  // Create PDF
-  elements.createPdfBtn.addEventListener('click', generatePdf);
 
 });
