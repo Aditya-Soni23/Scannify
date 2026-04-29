@@ -317,4 +317,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.head.appendChild(script);
 };
+
+// Add this inside your window.addEventListener('DOMContentLoaded', ...)
+elements.video.addEventListener('click', async (e) => {
+  if (!stream) return;
+
+  const track = stream.getVideoTracks()[0];
+  const capabilities = track.getCapabilities();
+
+  // Check if the phone supports manual focus or continuous focus reset
+  if (capabilities.focusMode) {
+      try {
+          // Visual feedback: Create a quick ripple effect where the user tapped
+          createFocusRing(e.clientX, e.clientY);
+
+          // Force the camera to cycle focus
+          await track.applyConstraints({
+              advanced: [{ focusMode: 'continuous' }]
+          });
+          
+          console.log("Focus reset triggered");
+      } catch (err) {
+          console.warn("Manual focus not supported on this hardware");
+      }
+  }
+});
+
+// Professional Visual Feedback: A "Focus Ring" just like the iPhone camera
+function createFocusRing(x, y) {
+  const ring = document.createElement('div');
+  ring.className = 'focus-ring';
+  ring.style.left = `${x}px`;
+  ring.style.top = `${y}px`;
+  document.body.appendChild(ring);
+
+  // Remove the ring after the animation finishes
+  setTimeout(() => ring.remove(), 500);
+}
 });
