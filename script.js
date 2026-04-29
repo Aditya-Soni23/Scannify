@@ -172,18 +172,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderList() {
-      elements.imageList.innerHTML = '';
-      images.forEach((img,i)=>{
-          const div = document.createElement('div');
-          div.className = 'list-item';
-          div.innerHTML = `<img src="${img}"><div class="remove-btn" data-index="${i}">✕</div>`;
-          div.querySelector('.remove-btn').onclick = () => {
-              images.splice(i, 1);
-              renderList();
-          };
-          elements.imageList.appendChild(div);
-      });
-  }
+    // 1. Completely clear the list before re-rendering
+    elements.imageList.innerHTML = '';
+
+    images.forEach((imgData, i) => {
+        // 2. Create the wrapper
+        const div = document.createElement('div');
+        div.className = 'list-item';
+
+        // 3. Create the image
+        const img = document.createElement('img');
+        img.src = imgData;
+
+        // 4. Create the remove button
+        const remove = document.createElement('div');
+        remove.className = 'remove-btn';
+        remove.innerHTML = '✕';
+        remove.onclick = (e) => {
+            e.stopPropagation(); // Prevent accidental clicks
+            images.splice(i, 1);
+            renderList(); // Refresh
+        };
+
+        // 5. Append everything
+        div.appendChild(img);
+        div.appendChild(remove);
+        elements.imageList.appendChild(div);
+    });
+}
 
   // --- EVENT HANDLERS ---
   elements.scanBtn.onclick = async () => {
