@@ -1,13 +1,18 @@
 {
-  "name": "Scanify Scanner",
+  "name": "Scanify - Document Scanner",
   "short_name": "Scanify",
-  "start_url": ".",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#3d5afe",
+  "theme_color": "#007bff",
+  "background_color": "#ffffff",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/1055/1055644.png",
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }

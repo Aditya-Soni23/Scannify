@@ -3,63 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanify | Premium Document Scanner</title>
+    <title>Scanify</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#121212">
-    <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+</script>
 </head>
 <body>
 
-    <div id="app">
-        <section id="screen-home" class="screen active">
-            <div class="hero">
-                <div class="logo">S</div>
-                <h1>Scanify</h1>
-                <p>Fast. Simple. Powerful.</p>
-            </div>
-            <button id="btn-start-scan" class="btn-primary-lg">Scan Now!</button>
-            <div id="recent-scans-preview"></div>
-        </section>
+    <div id="home-state" class="state active">
+        <header>
+            <h1>Scanify</h1>
+        </header>
+        <main>
+            <p>Scan documents easily from your browser.</p>
+            <button id="scan-btn">Scan Now</button>
+        </main>
+    </div>
 
-        <section id="screen-camera" class="screen">
-            <video id="camera-feed" autoplay playsinline></video>
-            <div class="camera-controls">
-                <button id="btn-cancel-camera" class="btn-icon">✕</button>
-                <button id="btn-capture" class="btn-capture"></button>
-                <div class="spacer"></div>
-            </div>
-        </section>
-
-        <section id="screen-editor" class="screen">
-            <div class="canvas-container">
-                <canvas id="editor-canvas"></canvas>
-                <div id="crop-handles">
-                    <div class="handle" id="h-tl"></div>
-                    <div class="handle" id="h-tr"></div>
-                    <div class="handle" id="h-bl"></div>
-                    <div class="handle" id="h-br"></div>
-                </div>
-            </div>
-            <div class="editor-controls">
-                <button id="btn-retake" class="btn-secondary">Retake</button>
-                <button id="btn-apply-crop" class="btn-primary">Apply Crop</button>
-            </div>
-        </section>
-
-        <section id="screen-review" class="screen">
-            <header class="app-bar">
-                <button id="btn-add-page">+ Add Page</button>
-                <button id="btn-finish" class="btn-success">Finish (PDF)</button>
-            </header>
-            <div id="pages-grid"></div>
-        </section>
-
-        <div id="loader" class="hidden">
-            <div class="spinner"></div>
-            <p>Processing...</p>
+    <div id="camera-state" class="state">
+        <video id="video" autoplay playsinline></video>
+        <div class="camera-controls">
+            <button id="capture-btn">
+                <span class="dot"></span>
+            </button>
         </div>
+    </div>
+
+    <div id="review-state" class="state">
+        <div class="image-container">
+            <img id="review-image" src="" alt="Captured document">
+            <canvas id="crop-canvas"></canvas>
+        </div>
+        <p class="status">Image captured and cropped.</p>
+        <div class="review-controls">
+            <button id="retake-btn">Retake</button>
+            <button id="next-btn">Next</button>
+            <button id="finish-btn">Finish</button>
+        </div>
+    </div>
+
+    <div id="pdf-state" class="state">
+        <header>
+            <button id="back-btn">&larr;</button>
+            <h1>My Scans</h1>
+        </header>
+        <div id="image-list"></div>
+        <footer>
+            <button id="create-pdf-btn">Create PDF</button>
+        </footer>
     </div>
 
     <script src="script.js"></script>

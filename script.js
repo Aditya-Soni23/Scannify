@@ -1,209 +1,220 @@
-const state = {
-  pages: [],
-  currentStream: null,
-  rawImage: null, // HTMLImageElement
-  corners: [], // [{x, y}, ...]
-};
+document.addEventListener("DOMContentLoaded", () => {
 
-// UI Elements
-const screens = document.querySelectorAll('.screen');
-const loader = document.getElementById('loader');
-const editorCanvas = document.getElementById('editor-canvas');
-
-// --- Navigation ---
-function showScreen(id) {
-  screens.forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// --- Camera Logic ---
-document.getElementById('btn-start-scan').onclick = async () => {
-  try {
-      state.currentStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" }, 
-          audio: false 
-      });
-      document.getElementById('camera-feed').srcObject = state.currentStream;
-      showScreen('screen-camera');
-  } catch (err) {
-      alert("Camera access denied or not available.");
-  }
-};
-
-document.getElementById('btn-capture').onclick = () => {
-  const video = document.getElementById('camera-feed');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  
-  // Stop camera
-  state.currentStream.getTracks().forEach(t => t.stop());
-  
-  processCapturedImage(canvas.toDataURL('image/jpeg'));
-};
-
-// --- Image Processing & Auto Edge Detection ---
-function processCapturedImage(dataUrl) {
-  loader.classList.remove('hidden');
-  const img = new Image();
-  img.onload = () => {
-      state.rawImage = img;
-      detectEdges(img);
-      renderEditor();
-      loader.classList.add('hidden');
-      showScreen('screen-editor');
+  // --- State Management ---
+  const states = {
+    HOME: 'home-state',
+    CAMERA: 'camera-state',
+    REVIEW: 'review-state',
+    PDF: 'pdf-state'
   };
-  img.src = dataUrl;
-}
 
-function detectEdges(img) {
-  // Basic auto-detection using OpenCV.js
-  // If OpenCV is loaded, we attempt to find the largest contour
-  try {
-      let src = cv.imread(img);
-      let gray = new cv.Mat();
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
-      cv.Canny(gray, gray, 75, 200);
-      
-      let contours = new cv.MatVector();
-      let hierarchy = new cv.Mat();
-      cv.findContours(gray, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+  let currentState = states.HOME;
 
-      // Logic to find the largest 4-sided polygon would go here
-      // Fallback: Default margins (Smart Crop simulation)
-      const w = img.width;
-      const h = img.height;
-      state.corners = [
-          {x: w*0.1, y: h*0.1}, {x: w*0.9, y: h*0.1},
-          {x: w*0.9, y: h*0.9}, {x: w*0.1, y: h*0.9}
-      ];
+  // --- State Variables ---
+  let stream = null;
+  let images = [];
 
-      src.delete(); gray.delete(); contours.delete(); hierarchy.delete();
-  } catch (e) {
-      console.error("OpenCV not ready or error:", e);
-      // Fallback crop
-      state.corners = [{x:50,y:50}, {x:img.width-50,y:50}, {x:img.width-50,y:img.height-50}, {x:50,y:img.height-50}];
+  // --- UI Elements ---
+  const elements = {
+    scanBtn: document.getElementById('scan-btn'),
+    captureBtn: document.getElementById('capture-btn'),
+    video: document.getElementById('video'),
+    cropCanvas: document.getElementById('crop-canvas'),
+    retakeBtn: document.getElementById('retake-btn'),
+    nextBtn: document.getElementById('next-btn'),
+    finishBtn: document.getElementById('finish-btn'),
+    imageList: document.getElementById('image-list'),
+    createPdfBtn: document.getElementById('create-pdf-btn'),
+    backBtn: document.getElementById('back-btn')
+  };
+
+  // --- Safe State Switching ---
+  function setActiveState(newState) {
+    currentState = newState;
+
+    const allStates = ['home-state', 'camera-state', 'review-state', 'pdf-state'];
+
+    allStates.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+
+    const activeEl = document.getElementById(newState);
+    if (activeEl) {
+      activeEl.classList.add('active');
+    } else {
+      console.error("State not found:", newState);
+    }
   }
-}
 
-// --- Manual Cropping UI ---
-function renderEditor() {
-  const ctx = editorCanvas.getContext('2d');
-  editorCanvas.width = state.rawImage.width;
-  editorCanvas.height = state.rawImage.height;
-  ctx.drawImage(state.rawImage, 0, 0);
-  
-  // Position physical handles based on canvas size/display
-  updateHandlePositions();
-}
+  // --- Camera Handling ---
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false
+      });
 
-function updateHandlePositions() {
-  const rect = editorCanvas.getBoundingClientRect();
-  const scaleX = rect.width / editorCanvas.width;
-  const scaleY = rect.height / editorCanvas.height;
-  
-  const ids = ['h-tl', 'h-tr', 'h-br', 'h-bl'];
-  state.corners.forEach((c, i) => {
-      const el = document.getElementById(ids[i]);
-      el.style.left = (c.x * scaleX + editorCanvas.offsetLeft) + 'px';
-      el.style.top = (c.y * scaleY + editorCanvas.offsetTop) + 'px';
-      
-      // Simple drag logic (for brevity, desktop mouse + touch)
-      el.onpointermove = (e) => {
-          if (e.buttons !== 1) return;
-          const containerRect = editorCanvas.parentElement.getBoundingClientRect();
-          c.x = (e.clientX - containerRect.left) / scaleX;
-          c.y = (e.clientY - containerRect.top) / scaleY;
-          updateHandlePositions();
-          drawCropLines();
-      };
-  });
-}
+      elements.video.srcObject = stream;
 
-function drawCropLines() {
-  const ctx = editorCanvas.getContext('2d');
-  ctx.clearRect(0,0, editorCanvas.width, editorCanvas.height);
-  ctx.drawImage(state.rawImage, 0, 0);
-  ctx.strokeStyle = "#3d5afe";
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(state.corners[0].x, state.corners[0].y);
-  state.corners.forEach(c => ctx.lineTo(c.x, c.y));
-  ctx.closePath();
-  ctx.stroke();
-}
+      // Wait for video metadata (important fix)
+      await new Promise(resolve => {
+        elements.video.onloadedmetadata = () => resolve();
+      });
 
-// --- Apply Perspective & Save ---
-document.getElementById('btn-apply-crop').onclick = () => {
-  // In a full implementation, use cv.getPerspectiveTransform here.
-  // For this version, we'll draw the cropped canvas to the review list.
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = 800; // Standardize page size
-  finalCanvas.height = 1100;
-  
-  // Simulate processed image
-  const ctx = finalCanvas.getContext('2d');
-  ctx.filter = 'contrast(1.2) brightness(1.1)'; // Simple "Magic Color" filter
-  ctx.drawImage(state.rawImage, 0, 0, finalCanvas.width, finalCanvas.height);
-  
-  state.pages.push(finalCanvas.toDataURL('image/jpeg', 0.8));
-  renderReviewGrid();
-  showScreen('screen-review');
-};
+      elements.video.play();
 
-function renderReviewGrid() {
-  const grid = document.getElementById('pages-grid');
-  grid.innerHTML = '';
-  state.pages.forEach((p, i) => {
+    } catch (error) {
+      console.error('Camera error:', error);
+      alert('Camera permission denied or not available');
+      setActiveState(states.HOME);
+    }
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+  }
+
+  // --- Capture + Crop ---
+  function captureAndCrop() {
+    const video = elements.video;
+
+    if (!video.videoWidth) {
+      alert("Camera not ready");
+      return;
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+
+    const ctx = tempCanvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    // --- Simple center crop (demo) ---
+    const cropFactor = 0.85;
+    const w = tempCanvas.width * cropFactor;
+    const h = tempCanvas.height * cropFactor;
+
+    const x = (tempCanvas.width - w) / 2;
+    const y = (tempCanvas.height - h) / 2;
+
+    const finalCanvas = elements.cropCanvas;
+    finalCanvas.width = w;
+    finalCanvas.height = h;
+
+    const fctx = finalCanvas.getContext('2d');
+    fctx.drawImage(tempCanvas, x, y, w, h, 0, 0, w, h);
+  }
+
+  // --- PDF Generation ---
+  function generatePdf() {
+    if (images.length === 0) {
+      alert('No images added');
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+    script.onload = () => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+
+      images.forEach((img, i) => {
+        if (i > 0) pdf.addPage();
+
+        const margin = 10;
+        pdf.addImage(img, 'PNG', margin, margin, pdfW - 2 * margin, pdfH - 2 * margin);
+      });
+
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+
+      window.open(url, '_blank');
+    };
+
+    document.head.appendChild(script);
+  }
+
+  // --- Render Image List ---
+  function renderImageList() {
+    elements.imageList.innerHTML = '';
+
+    images.forEach((imgData, index) => {
       const div = document.createElement('div');
-      div.className = 'page-thumb';
-      div.innerHTML = `<img src="${p}"><button class="delete-btn" onclick="deletePage(${i})">✕</button>`;
-      grid.appendChild(div);
-  });
-}
+      div.className = 'list-item';
 
-window.deletePage = (i) => {
-  state.pages.splice(i, 1);
-  renderReviewGrid();
-};
+      const img = document.createElement('img');
+      img.src = imgData;
 
-document.getElementById('btn-add-page').onclick = () => {
-  document.getElementById('btn-start-scan').click();
-};
+      const remove = document.createElement('div');
+      remove.className = 'remove-btn';
+      remove.innerText = '×';
 
-// --- PDF Generation & Sharing ---
-document.getElementById('btn-finish').onclick = async () => {
-  if (state.pages.length === 0) return;
-  loader.classList.remove('hidden');
+      remove.onclick = () => {
+        images.splice(index, 1);
+        renderImageList();
+      };
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const width = doc.internal.pageSize.getWidth();
-  const height = doc.internal.pageSize.getHeight();
-
-  state.pages.forEach((data, i) => {
-      if (i > 0) doc.addPage();
-      doc.addImage(data, 'JPEG', 0, 0, width, height);
-  });
-
-  const pdfBlob = doc.output('blob');
-  const file = new File([pdfBlob], "Scanify_Document.pdf", { type: "application/pdf" });
-
-  loader.classList.add('hidden');
-
-  if (navigator.share) {
-      try {
-          await navigator.share({
-              files: [file],
-              title: 'Scanify Document',
-              text: 'Check out my scanned document!'
-          });
-      } catch (e) {
-          doc.save('Scanify_Document.pdf');
-      }
-  } else {
-      doc.save('Scanify_Document.pdf');
+      div.appendChild(img);
+      div.appendChild(remove);
+      elements.imageList.appendChild(div);
+    });
   }
-};
+
+  // --- Events ---
+
+  // Scan
+  elements.scanBtn.addEventListener('click', async () => {
+    setActiveState(states.CAMERA);
+    await startCamera();
+  });
+
+  // Capture
+  elements.captureBtn.addEventListener('click', () => {
+    captureAndCrop();
+    stopCamera();
+    setActiveState(states.REVIEW);
+  });
+
+  // Retake
+  elements.retakeBtn.addEventListener('click', async () => {
+    setActiveState(states.CAMERA);
+    await startCamera();
+  });
+
+  // Next
+  elements.nextBtn.addEventListener('click', async () => {
+    const imgData = elements.cropCanvas.toDataURL('image/png');
+    images.push(imgData);
+
+    setActiveState(states.CAMERA);
+    await startCamera();
+  });
+
+  // Finish
+  elements.finishBtn.addEventListener('click', () => {
+    const imgData = elements.cropCanvas.toDataURL('image/png');
+    images.push(imgData);
+
+    renderImageList();
+    setActiveState(states.PDF);
+  });
+
+  // Back
+  elements.backBtn.addEventListener('click', () => {
+    images = [];
+    setActiveState(states.HOME);
+  });
+
+  // Create PDF
+  elements.createPdfBtn.addEventListener('click', generatePdf);
+
+});

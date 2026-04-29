@@ -1,60 +1,180 @@
-:root {
-  --bg: #121212;
-  --surface: #1e1e1e;
-  --primary: #3d5afe;
-  --success: #00e676;
-  --text: #ffffff;
-  --text-dim: #b0b0b0;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f0f0f5;
+  color: #333;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
 
-body { background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; }
+/* Base style for each state/screen */
+.state {
+  display: none; /* Hidden by default */
+  width: 100%;
+  height: 100vh;
+  flex-direction: column;
+}
 
-.screen { 
-  display: none; 
-  flex-direction: column; 
-  height: 100vh; 
-  width: 100vw; 
+.state.active {
+  display: flex; /* Active screen is visible */
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+/* --- Homepage --- */
+#home-state {
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+#scan-btn {
+  background-color: #007bff;
+  color: white;
+  margin-top: 20px;
+}
+
+/* --- Camera View --- */
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Important for full-screen camera */
+  background-color: black;
+}
+
+.camera-controls {
   position: absolute;
-  top: 0; left: 0;
-  animation: fadeIn 0.3s ease;
+  bottom: 30px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
-.screen.active { display: flex; }
 
-/* Home Screen */
-.hero { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.logo { width: 80px; height: 80px; background: var(--primary); border-radius: 20px; font-size: 40px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(61, 90, 254, 0.3); }
+#capture-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 5px solid white;
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-/* Camera */
-#camera-feed { width: 100%; height: 100%; object-fit: cover; }
-.camera-controls { position: absolute; bottom: 40px; width: 100%; display: flex; align-items: center; justify-content: space-around; }
-.btn-capture { width: 70px; height: 70px; border-radius: 50%; border: 5px solid white; background: transparent; outline: none; }
-.btn-capture:active { background: white; }
+#capture-btn .dot {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+}
 
-/* Editor & Handles */
-.canvas-container { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000; }
-#editor-canvas { max-width: 100%; max-height: 80vh; }
-.handle { position: absolute; width: 30px; height: 30px; background: rgba(61, 90, 254, 0.7); border: 2px solid white; border-radius: 50%; transform: translate(-15px, -15px); touch-action: none; }
+/* --- Image Review --- */
+.image-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
 
-/* Buttons */
-.btn-primary-lg { margin: 40px; padding: 18px; border-radius: 50px; border: none; background: var(--primary); color: white; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
-.editor-controls { display: flex; gap: 10px; padding: 20px; background: var(--surface); }
-.btn-primary, .btn-secondary, .btn-success { flex: 1; padding: 15px; border-radius: 10px; border: none; font-weight: 600; }
-.btn-primary { background: var(--primary); color: white; }
-.btn-secondary { background: #444; color: white; }
-.btn-success { background: var(--success); color: black; }
+#review-image {
+  max-width: 100%;
+  max-height: 100%;
+  display: none; /* We use a canvas for final image, so hide this */
+}
 
-/* Grid */
-#pages-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px; overflow-y: auto; }
-.page-thumb { background: var(--surface); border-radius: 8px; overflow: hidden; position: relative; }
-.page-thumb img { width: 100%; display: block; }
-.page-thumb .delete-btn { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; }
+#crop-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 
-/* Loader */
-#loader { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.hidden { display: none !important; }
-.spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+.status {
+  text-align: center;
+  padding: 10px;
+  color: #555;
+  background-color: rgba(255, 255, 255, 0.7);
+}
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes spin { to { transform: rotate(360deg); } }
+.review-controls {
+  display: flex;
+  justify-content: space-around;
+  padding: 15px;
+  background-color: white;
+}
+
+/* --- Image List/PDF --- */
+#pdf-state header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: #fff;
+  border-bottom: 1px solid #ddd;
+}
+
+#image-list {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 15px;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.list-item {
+  position: relative;
+  aspect-ratio: 1;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.list-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.list-item .remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 18px;
+  line-height: 25px;
+  text-align: center;
+  cursor: pointer;
+}
+
+#pdf-state footer {
+  padding: 15px;
+  background-color: #fff;
+}
+
+#create-pdf-btn {
+  width: 100%;
+  background-color: #28a745;
+  color: white;
+}
