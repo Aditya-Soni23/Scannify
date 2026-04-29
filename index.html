@@ -1,54 +1,55 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanify</title>
+    <title>Scanify Pro</title>
+    <link rel="manifest" href="./manifest.json">
     <link rel="stylesheet" href="style.css">
-
+    <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
 </head>
 <body>
 
+    <!-- Home State -->
     <div id="home-state" class="state active">
-        <header>
-            <h1>Scanify</h1>
-        </header>
-        <main>
-            <p>Scan documents easily from your browser.</p>
-            <button id="scan-btn">Scan Now</button>
-        </main>
+        <div class="glass-card">
+            <h1 class="hero-logo">SCANIFY</h1>
+            <p style="color: #888; margin-bottom: 30px;">Digital Document Architect</p>
+            <button id="scan-btn">Initialize Scan</button>
+        </div>
     </div>
 
+    <!-- Camera State -->
     <div id="camera-state" class="state">
         <video id="video" autoplay playsinline></video>
         <div class="camera-controls">
-            <button id="capture-btn">
-                <span class="dot"></span>
-            </button>
+            <button id="capture-btn"></button>
         </div>
     </div>
 
+    <!-- Review State -->
     <div id="review-state" class="state">
         <div class="image-container">
-            <img id="review-image" src="" alt="Captured document">
             <canvas id="crop-canvas"></canvas>
         </div>
-        <p class="status">Image captured and cropped.</p>
         <div class="review-controls">
             <button id="retake-btn">Retake</button>
-            <button id="next-btn">Next</button>
-            <button id="finish-btn">Finish</button>
+            <button id="next-btn" style="border-color: var(--primary);">Add Page</button>
+            <button id="finish-btn">Compile PDF</button>
         </div>
     </div>
 
+    <!-- PDF State -->
     <div id="pdf-state" class="state">
-        <header>
-            <button id="back-btn">&larr;</button>
-            <h1>My Scans</h1>
+        <header style="padding: 20px; display: flex; align-items: center; justify-content: space-between;">
+            <button id="back-btn" style="padding: 8px 15px;">&larr;</button>
+            <h2 style="font-size: 1.2rem;">Workspace</h2>
+            <div style="width: 40px;"></div>
         </header>
         <div id="image-list"></div>
-        <footer>
-            <button id="create-pdf-btn">Create PDF</button>
+        <footer style="padding: 20px;">
+            <button id="create-pdf-btn" style="width: 100%; background: var(--primary); color: #000;">Export as PDF</button>
         </footer>
     </div>
 

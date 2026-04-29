@@ -1,150 +1,179 @@
+/* style.css */
+:root {
+  --primary: #00f2ff;
+  --secondary: #7000ff;
+  --bg: #050505;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f0f0f5;
-  color: #333;
-  overflow-x: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(112, 0, 255, 0.05) 0%, transparent 40%);
 }
 
-/* Base style for each state/screen */
+/* State Transitions */
 .state {
-  display: none; /* Hidden by default */
+  display: none;
   width: 100%;
   height: 100vh;
   flex-direction: column;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .state.active {
-  display: flex; /* Active screen is visible */
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
 }
 
+/* Glassmorphism Buttons */
 button {
-  padding: 12px 24px;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
+  padding: 14px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--glass);
+  color: white;
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
 }
 
-/* --- Homepage --- */
-#home-state {
-  text-align: center;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+button:active {
+  transform: scale(0.95);
 }
 
 #scan-btn {
-  background-color: #007bff;
-  color: white;
-  margin-top: 20px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 242, 255, 0.3);
 }
 
-/* --- Camera View --- */
+/* Home Screen */
+#home-state {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.hero-logo {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+/* Camera View */
 #video {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Important for full-screen camera */
-  background-color: black;
+  object-fit: cover;
+  filter: contrast(1.1) brightness(1.1);
 }
 
 .camera-controls {
   position: absolute;
-  bottom: 30px;
-  left: 0;
+  bottom: 50px;
   width: 100%;
   display: flex;
   justify-content: center;
+  z-index: 10;
 }
 
 #capture-btn {
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  border: 5px solid white;
-  background-color: transparent;
+  border: 4px solid white;
+  background: transparent;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-#capture-btn .dot {
-  width: 50px;
-  height: 50px;
+#capture-btn::after {
+  content: '';
+  width: 60px;
+  height: 60px;
+  background: white;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
+  transition: 0.2s;
 }
 
-/* --- Image Review --- */
+#capture-btn:active::after {
+  transform: scale(0.8);
+  background: var(--primary);
+}
+
+/* Review State */
 .image-container {
   flex-grow: 1;
   display: flex;
+  padding: 20px;
+  background: #000;
   justify-content: center;
   align-items: center;
-  position: relative;
-}
-
-#review-image {
-  max-width: 100%;
-  max-height: 100%;
-  display: none; /* We use a canvas for final image, so hide this */
 }
 
 #crop-canvas {
   max-width: 100%;
-  max-height: 100%;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.status {
-  text-align: center;
-  padding: 10px;
-  color: #555;
-  background-color: rgba(255, 255, 255, 0.7);
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 0 50px rgba(0,0,0,1);
 }
 
 .review-controls {
-  display: flex;
-  justify-content: space-around;
-  padding: 15px;
-  background-color: white;
-}
-
-/* --- Image List/PDF --- */
-#pdf-state header {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  background-color: #fff;
-  border-bottom: 1px solid #ddd;
-}
-
-#image-list {
-  flex-grow: 1;
+  padding: 30px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 15px;
-  padding: 15px;
+  background: var(--bg);
+}
+
+#finish-btn {
+  grid-column: span 2;
+  background: var(--primary);
+  color: #000;
+}
+
+/* PDF State List */
+#image-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .list-item {
   position: relative;
-  aspect-ratio: 1;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 15px;
   overflow: hidden;
+  border: 1px solid var(--glass-border);
+  aspect-ratio: 3/4;
 }
 
 .list-item img {
@@ -153,28 +182,16 @@ button {
   object-fit: cover;
 }
 
-.list-item .remove-btn {
+.remove-btn {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 25px;
-  height: 25px;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,0,0,0.7);
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  font-size: 18px;
-  line-height: 25px;
-  text-align: center;
-  cursor: pointer;
-}
-
-#pdf-state footer {
-  padding: 15px;
-  background-color: #fff;
-}
-
-#create-pdf-btn {
-  width: 100%;
-  background-color: #28a745;
-  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
 }

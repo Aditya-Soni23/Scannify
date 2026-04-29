@@ -1,23 +1,40 @@
-const CACHE_NAME = 'scanify-v1';
-const ASSETS = [
-    './',
-    './index.html',
-    './style.css',
-    './script.js'
-];
+const CACHE_NAME = "scanify-v1";
 
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(ASSETS);
-        })
-    );
+const urlsToCache = [
+    "./",
+    "./index.html",
+    "./style.css",
+    "./script.js",
+    "./logo.png"
+  ];
+
+// install
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
+  );
 });
 
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
+// fetch
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => response || fetch(event.request))
+  );
+});
+
+// update
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
         })
-    );
+      )
+    )
+  );
 });

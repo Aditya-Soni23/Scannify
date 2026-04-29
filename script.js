@@ -1,307 +1,207 @@
+// script.js
 document.addEventListener("DOMContentLoaded", () => {
-
-  const states = {
-    HOME: 'home-state',
-    CAMERA: 'camera-state',
-    REVIEW: 'review-state',
-    PDF: 'pdf-state'
-  };
-
-  let currentState = states.HOME;
+  const states = { HOME: 'home-state', CAMERA: 'camera-state', REVIEW: 'review-state', PDF: 'pdf-state' };
   let stream = null;
   let images = [];
   let cropPoints = [];
   let draggingPoint = null;
-
-  const elements = {
-    scanBtn: document.getElementById('scan-btn'),
-    captureBtn: document.getElementById('capture-btn'),
-    video: document.getElementById('video'),
-    cropCanvas: document.getElementById('crop-canvas'),
-    retakeBtn: document.getElementById('retake-btn'),
-    nextBtn: document.getElementById('next-btn'),
-    finishBtn: document.getElementById('finish-btn'),
-    imageList: document.getElementById('image-list'),
-    createPdfBtn: document.getElementById('create-pdf-btn'),
-    backBtn: document.getElementById('back-btn')
-  };
-
-  // ---------- STATE ----------
-  function setActiveState(newState) {
-    ['home-state','camera-state','review-state','pdf-state'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.remove('active');
-    });
-
-    const activeEl = document.getElementById(newState);
-    if (activeEl) activeEl.classList.add('active');
-  }
-
-  // ---------- CAMERA ----------
-  async function startCamera() {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-
-      elements.video.srcObject = stream;
-
-      await new Promise(res => {
-        elements.video.onloadedmetadata = res;
-      });
-
-      elements.video.play();
-
-    } catch (err) {
-      alert("Camera error");
-      console.error(err);
-    }
-  }
-
-  function stopCamera() {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
-  }
-
-  // ---------- CAPTURE ----------
-  function captureFrame() {
-    const canvas = document.createElement('canvas');
-    canvas.width = elements.video.videoWidth;
-    canvas.height = elements.video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(elements.video, 0, 0);
-
-    return canvas;
-  }
-
-  // ---------- AUTO DETECT ----------
-  function autoDetect(canvas) {
-    if (typeof cv === 'undefined') {
-      console.warn("OpenCV not loaded");
-      return;
-    }
-
-    let src = cv.imread(canvas);
-    let gray = new cv.Mat();
-    let edges = new cv.Mat();
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
-
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    cv.GaussianBlur(gray, gray, new cv.Size(5,5), 0);
-    cv.Canny(gray, edges, 75, 200);
-
-    cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-
-    let biggest = null;
-    let maxArea = 0;
-
-    for (let i = 0; i < contours.size(); i++) {
-      let cnt = contours.get(i);
-      let area = cv.contourArea(cnt);
-
-      if (area > 1000) {
-        let peri = cv.arcLength(cnt, true);
-        let approx = new cv.Mat();
-        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-        if (approx.rows === 4 && area > maxArea) {
-          biggest = approx;
-          maxArea = area;
-        }
-      }
-    }
-
-    if (biggest) {
-      cropPoints = [];
-
-      for (let i = 0; i < 4; i++) {
-        cropPoints.push({
-          x: biggest.intPtr(i,0)[0],
-          y: biggest.intPtr(i,0)[1]
-        });
-      }
-    } else {
-      // fallback (center rectangle)
-      cropPoints = [
-        {x:50,y:50},
-        {x:canvas.width-50,y:50},
-        {x:canvas.width-50,y:canvas.height-50},
-        {x:50,y:canvas.height-50}
-      ];
-    }
-
-    src.delete(); gray.delete(); edges.delete();
-    contours.delete(); hierarchy.delete();
-  }
-
-  // ---------- DRAW ----------
-  function drawCanvas(baseCanvas) {
-    const canvas = elements.cropCanvas;
-    canvas.width = baseCanvas.width;
-    canvas.height = baseCanvas.height;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(baseCanvas, 0, 0);
-
-    ctx.strokeStyle = "lime";
-    ctx.lineWidth = 3;
-
-    ctx.beginPath();
-    ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
-    for (let i=1;i<4;i++){
-      ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
-    }
-    ctx.closePath();
-    ctx.stroke();
-
-    cropPoints.forEach(p => {
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,8,0,2*Math.PI);
-      ctx.fillStyle="red";
-      ctx.fill();
-    });
-  }
-
-  // ---------- DRAG ----------
-  elements.cropCanvas.addEventListener('mousedown', e => {
-    const rect = elements.cropCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    cropPoints.forEach((p,i)=>{
-      if (Math.hypot(p.x-x,p.y-y)<15) draggingPoint=i;
-    });
-  });
-
-  elements.cropCanvas.addEventListener('mousemove', e => {
-    if (draggingPoint!==null) {
-      const rect = elements.cropCanvas.getBoundingClientRect();
-      cropPoints[draggingPoint].x = e.clientX - rect.left;
-      cropPoints[draggingPoint].y = e.clientY - rect.top;
-
-      drawCanvas(currentCaptured);
-    }
-  });
-
-  window.addEventListener('mouseup', ()=> draggingPoint=null);
-
   let currentCaptured = null;
 
-  // ---------- FINAL CROP ----------
-  function getCroppedImage() {
-    const src = currentCaptured;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+  const elements = {
+      scanBtn: document.getElementById('scan-btn'),
+      captureBtn: document.getElementById('capture-btn'),
+      video: document.getElementById('video'),
+      cropCanvas: document.getElementById('crop-canvas'),
+      retakeBtn: document.getElementById('retake-btn'),
+      nextBtn: document.getElementById('next-btn'),
+      finishBtn: document.getElementById('finish-btn'),
+      imageList: document.getElementById('image-list'),
+      createPdfBtn: document.getElementById('create-pdf-btn'),
+      backBtn: document.getElementById('back-btn')
+  };
 
-    // simple bounding box crop (can upgrade to perspective later)
-    const xs = cropPoints.map(p=>p.x);
-    const ys = cropPoints.map(p=>p.y);
-
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-
-    const w = maxX-minX;
-    const h = maxY-minY;
-
-    canvas.width = w;
-    canvas.height = h;
-
-    ctx.drawImage(src, minX, minY, w, h, 0, 0, w, h);
-
-    return canvas.toDataURL("image/png");
-  }
-
-  // ---------- PDF ----------
-  function generatePdf() {
-    if (!images.length) return alert("No images");
-
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-
-    script.onload = () => {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF();
-
-      images.forEach((img,i)=>{
-        if (i>0) pdf.addPage();
-        pdf.addImage(img,'PNG',10,10,180,260);
+  function setActiveState(newState) {
+      document.querySelectorAll('.state').forEach(el => {
+          el.classList.remove('active');
+          setTimeout(() => { if(el.id === newState) el.classList.add('active'); }, 50);
       });
-
-      pdf.save("scanify.pdf");
-    };
-
-    document.head.appendChild(script);
   }
 
-  // ---------- EVENTS ----------
-  elements.scanBtn.onclick = async ()=>{
-    setActiveState(states.CAMERA);
-    await startCamera();
-  };
+  async function startCamera() {
+      try {
+          stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+          });
+          elements.video.srcObject = stream;
+          elements.video.play();
+      } catch (err) {
+          console.error("Camera access denied");
+      }
+  }
 
-  elements.captureBtn.onclick = ()=>{
-    currentCaptured = captureFrame();
-    autoDetect(currentCaptured);
-    drawCanvas(currentCaptured);
+  function captureFrame() {
+      const canvas = document.createElement('canvas');
+      canvas.width = elements.video.videoWidth;
+      canvas.height = elements.video.videoHeight;
+      canvas.getContext('2d').drawImage(elements.video, 0, 0);
+      return canvas;
+  }
 
-    stopCamera();
-    setActiveState(states.REVIEW);
-  };
+  // Advanced Point Ordering
+  function orderPoints(pts) {
+      const center = pts.reduce((acc, p) => ({ x: acc.x + p.x/4, y: acc.y + p.y/4 }), { x: 0, y: 0 });
+      const sorted = [...pts].sort((a, b) => Math.atan2(a.y - center.y, a.x - center.x) - Math.atan2(b.y - center.y, b.x - center.x));
+      return sorted;
+  }
 
-  elements.retakeBtn.onclick = async ()=>{
-    setActiveState(states.CAMERA);
-    await startCamera();
-  };
+  function autoDetect(canvas) {
+      const w = canvas.width, h = canvas.height;
+      cropPoints = [{x: w*0.2, y: h*0.2}, {x: w*0.8, y: h*0.2}, {x: w*0.8, y: h*0.8}, {x: w*0.2, y: h*0.8}];
 
-  elements.nextBtn.onclick = async ()=>{
-    images.push(getCroppedImage());
-    setActiveState(states.CAMERA);
-    await startCamera();
-  };
+      if (typeof cv !== 'undefined') {
+          try {
+              let src = cv.imread(canvas);
+              let dst = new cv.Mat();
+              cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+              cv.Canny(dst, dst, 50, 150);
+              let contours = new cv.MatVector();
+              let hierarchy = new cv.Mat();
+              cv.findContours(dst, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-  elements.finishBtn.onclick = ()=>{
-    images.push(getCroppedImage());
-    renderList();
-    setActiveState(states.PDF);
-  };
+              let maxArea = 0, bestCnt = null;
+              for (let i = 0; i < contours.size(); i++) {
+                  let cnt = contours.get(i);
+                  let area = cv.contourArea(cnt);
+                  if (area > maxArea) {
+                      let peri = cv.arcLength(cnt, true);
+                      let approx = new cv.Mat();
+                      cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+                      if (approx.rows === 4) {
+                          maxArea = area;
+                          bestCnt = approx;
+                      }
+                  }
+              }
 
-  elements.backBtn.onclick = ()=>{
-    images=[];
-    setActiveState(states.HOME);
-  };
+              if (bestCnt) {
+                  let pts = [];
+                  for (let i = 0; i < 4; i++) {
+                      pts.push({ x: bestCnt.data32S[i * 2], y: bestCnt.data32S[i * 2 + 1] });
+                  }
+                  cropPoints = orderPoints(pts);
+              }
+              src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
+          } catch (e) { console.log("CV logic error"); }
+      }
+  }
 
-  elements.createPdfBtn.onclick = generatePdf;
+  function drawUI() {
+      const ctx = elements.cropCanvas.getContext('2d');
+      elements.cropCanvas.width = currentCaptured.width;
+      elements.cropCanvas.height = currentCaptured.height;
+      ctx.drawImage(currentCaptured, 0, 0);
 
-  // ---------- RENDER ----------
-  function renderList() {
-    elements.imageList.innerHTML = '';
+      // Draw tactical overlay
+      ctx.strokeStyle = '#00f2ff';
+      ctx.lineWidth = 6;
+      ctx.fillStyle = 'rgba(0, 242, 255, 0.2)';
+      ctx.beginPath();
+      ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
+      cropPoints.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
-    images.forEach((img,i)=>{
-      const div=document.createElement('div');
-      div.className='list-item';
+      cropPoints.forEach(p => {
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+          ctx.fill();
+      });
+  }
 
-      const image=document.createElement('img');
-      image.src=img;
-
-      const remove=document.createElement('div');
-      remove.className='remove-btn';
-      remove.innerText='×';
-
-      remove.onclick=()=>{
-        images.splice(i,1);
-        renderList();
+  // Touch/Mouse interactions for dragging
+  const handleMove = (e) => {
+      if (draggingPoint === null) return;
+      const rect = elements.cropCanvas.getBoundingClientRect();
+      const scaleX = elements.cropCanvas.width / rect.width;
+      const scaleY = elements.cropCanvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      cropPoints[draggingPoint] = {
+          x: (clientX - rect.left) * scaleX,
+          y: (clientY - rect.top) * scaleY
       };
+      drawUI();
+  };
 
-      div.appendChild(image);
-      div.appendChild(remove);
-      elements.imageList.appendChild(div);
-    });
+  elements.cropCanvas.onmousedown = (e) => {
+      const rect = elements.cropCanvas.getBoundingClientRect();
+      const scaleX = elements.cropCanvas.width / rect.width;
+      const scaleY = elements.cropCanvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      cropPoints.forEach((p, i) => {
+          if (Math.hypot(p.x - x, p.y - y) < 40) draggingPoint = i;
+      });
+  };
+
+  window.onmousemove = handleMove;
+  window.onmouseup = () => draggingPoint = null;
+  elements.cropCanvas.ontouchstart = (e) => elements.cropCanvas.onmousedown(e.touches[0]);
+  elements.cropCanvas.ontouchmove = handleMove;
+  elements.cropCanvas.ontouchend = () => draggingPoint = null;
+
+  // Navigation & Logic
+  elements.scanBtn.onclick = () => { setActiveState(states.CAMERA); startCamera(); };
+  
+  elements.captureBtn.onclick = () => {
+      currentCaptured = captureFrame();
+      autoDetect(currentCaptured);
+      drawUI();
+      if(stream) stream.getTracks().forEach(t => t.stop());
+      setActiveState(states.REVIEW);
+  };
+
+  elements.nextBtn.onclick = () => {
+      images.push(elements.cropCanvas.toDataURL());
+      setActiveState(states.CAMERA);
+      startCamera();
+  };
+
+  elements.finishBtn.onclick = () => {
+      images.push(elements.cropCanvas.toDataURL());
+      renderList();
+      setActiveState(states.PDF);
+  };
+
+  function renderList() {
+      elements.imageList.innerHTML = '';
+      images.forEach((img, i) => {
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `<img src="${img}"><div class="remove-btn" onclick="removeImage(${i})">×</div>`;
+          elements.imageList.appendChild(item);
+      });
   }
 
+  window.removeImage = (i) => { images.splice(i, 1); renderList(); };
+
+  elements.createPdfBtn.onclick = () => {
+      const { jsPDF } = window.jspdf || { jsPDF: null };
+      if (!jsPDF) {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = () => elements.createPdfBtn.click();
+          document.head.appendChild(s);
+          return;
+      }
+      const doc = new jsPDF();
+      images.forEach((img, i) => {
+          if (i > 0) doc.addPage();
+          doc.addImage(img, 'PNG', 10, 10, 190, 277);
+      });
+      doc.save("Diamond_Scan.pdf");
+  };
 });
