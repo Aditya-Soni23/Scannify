@@ -1,105 +1,108 @@
-/* style.css */
 :root {
-  --primary: #00f2ff;
-  --secondary: #7000ff;
-  --bg: #050505;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --bg: #0f172a;
   --glass: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --text: #ffffff;
+  --text: #f8fafc;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
 
 body {
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   overflow: hidden;
   height: 100vh;
-  background-image: 
-    radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(112, 0, 255, 0.05) 0%, transparent 40%);
+  display: flex;
+  justify-content: center;
 }
 
-/* State Transitions */
+.app-container {
+  width: 100%;
+  max-width: 500px;
+  height: 100%;
+  position: relative;
+  background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+}
+
 .state {
   display: none;
-  width: 100%;
-  height: 100vh;
+  position: absolute;
+  inset: 0;
   flex-direction: column;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
 }
 
-.state.active {
-  display: flex;
-  opacity: 1;
-  transform: translateY(0);
-}
+.state.active { display: flex; }
 
-/* Glassmorphism Buttons */
-button {
-  padding: 14px 28px;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  background: var(--glass);
-  color: white;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-button:active {
-  transform: scale(0.95);
-}
-
-#scan-btn {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  border: none;
-  box-shadow: 0 8px 32px rgba(0, 242, 255, 0.3);
-}
-
-/* Home Screen */
+/* Home Screen UI */
 #home-state {
   justify-content: center;
   align-items: center;
   text-align: center;
+  padding: 2rem;
 }
 
-.hero-logo {
-  font-size: 3rem;
-  font-weight: 800;
-  background: linear-gradient(to right, #fff, #888);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 10px;
+.logo-icon { font-size: 4rem; margin-bottom: 1rem; }
+h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; }
+h1 span { color: var(--primary); }
+p { opacity: 0.7; margin-bottom: 2rem; }
+
+/* Buttons */
+.primary-btn {
+  background: var(--primary);
+  color: white;
+  padding: 16px 32px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-/* Camera View */
-#video {
+.secondary-btn {
+  background: var(--glass);
+  color: white;
+  border: 1px solid var(--glass-border);
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+/* Camera Screen */
+#video { width: 100%; height: 100%; object-fit: cover; }
+
+.scan-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+}
+
+.scan-line {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: contrast(1.1) brightness(1.1);
+  height: 4px;
+  background: linear-gradient(to right, transparent, var(--primary), transparent);
+  position: absolute;
+  top: 0;
+  animation: scanMove 3s infinite linear;
+  box-shadow: 0 0 15px var(--primary);
+}
+
+@keyframes scanMove {
+  0% { top: 0; }
+  100% { top: 100%; }
 }
 
 .camera-controls {
   position: absolute;
-  bottom: 50px;
+  bottom: 40px;
   width: 100%;
   display: flex;
   justify-content: center;
-  z-index: 10;
 }
 
 #capture-btn {
@@ -108,90 +111,118 @@ button:active {
   border-radius: 50%;
   border: 4px solid white;
   background: transparent;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 5px;
+  cursor: pointer;
 }
 
-#capture-btn::after {
-  content: '';
-  width: 60px;
-  height: 60px;
+.inner-circle {
+  width: 100%;
+  height: 100%;
   background: white;
   border-radius: 50%;
-  transition: 0.2s;
+  transition: transform 0.2s;
 }
 
-#capture-btn:active::after {
-  transform: scale(0.8);
-  background: var(--primary);
-}
+#capture-btn:active .inner-circle { transform: scale(0.9); }
 
 /* Review State */
+.glass-header {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
 .image-container {
   flex-grow: 1;
   display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
   background: #000;
-  justify-content: center;
-  align-items: center;
 }
 
-#crop-canvas {
-  max-width: 100%;
-  max-height: 80vh;
-  border-radius: 12px;
-  box-shadow: 0 0 50px rgba(0,0,0,1);
-}
+#crop-canvas { max-width: 100%; border-radius: 12px; }
 
 .review-controls {
-  padding: 30px;
+  padding: 24px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: 12px;
   background: var(--bg);
 }
 
-#finish-btn {
-  grid-column: span 2;
-  background: var(--primary);
-  color: #000;
-}
+#finish-btn { grid-column: span 2; margin-top: 8px; }
 
-/* PDF State List */
+/* Image List */
 #image-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
+  gap: 16px;
   padding: 20px;
   overflow-y: auto;
 }
 
 .list-item {
   position: relative;
-  border-radius: 15px;
+  border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--glass-border);
   aspect-ratio: 3/4;
 }
 
-.list-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.list-item img { width: 100%; height: 100%; object-fit: cover; }
 
 .remove-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255,0,0,0.7);
+  top: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
   width: 28px;
   height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(5px);
+  font-weight: bold;
+}
+/* Sleek Close/Back Button in My Scans */
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 15px; /* Space between X and the Title */
+}
+
+.icon-btn:hover {
+  background: rgba(239, 68, 68, 0.2); /* Soft red tint on hover */
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: rotate(90deg); /* Cool subtle animation */
+}
+
+.icon-btn:active {
+  transform: scale(0.9) rotate(90deg);
+}
+.logo-wrapper {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.app-logo {
+  width: 120px; /* Adjust size as needed */
+  height: auto;
+  border-radius: 15%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3)); /* Adds depth to your logo */
 }
